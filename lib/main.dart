@@ -59,10 +59,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
       fetchedUser = null;
     }
 
-    // Ensure smooth branding splash screen is shown for at least 1.8 seconds
+    // Ensure flowing scenery splash screen is displayed for 3.5 seconds
     final elapsed = DateTime.now().difference(startTime);
-    if (elapsed.inMilliseconds < 1800) {
-      await Future.delayed(Duration(milliseconds: 1800 - elapsed.inMilliseconds));
+    if (elapsed.inMilliseconds < 3500) {
+      await Future.delayed(Duration(milliseconds: 3500 - elapsed.inMilliseconds));
     }
 
     if (mounted) {
@@ -95,7 +95,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
 }
 
 // -----------------------------------------------------------------------------
-// SPLASH SCREEN
+// FLOWING SCENERY SPLASH SCREEN
 // -----------------------------------------------------------------------------
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -104,109 +104,151 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _animController;
+class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
+  late AnimationController _waveController;
+  late AnimationController _logoController;
   late Animation<double> _scaleAnim;
   late Animation<double> _fadeAnim;
   late Animation<double> _pulseAnim;
 
+  int _tickerIndex = 0;
+  final List<Map<String, String>> _tickers = [
+    {"icon": "⚡", "text": "Instant Automated Bill Payments & Receipts"},
+    {"icon": "🔐", "text": "Double-Entry Ledger & Zero-Fee Transfers"},
+    {"icon": "🎓", "text": "Direct WAEC, NECO & JAMB Certificate Portal"},
+  ];
+
   @override
   void initState() {
     super.initState();
-    _animController = AnimationController(
+
+    // Wave animation controller (continuous flowing scenery)
+    _waveController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(seconds: 4),
+    )..repeat();
+
+    // Logo & pulse animation controller
+    _logoController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
 
-    _scaleAnim = Tween<double>(begin: 0.88, end: 1.05).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
+    _scaleAnim = Tween<double>(begin: 0.88, end: 1.06).animate(
+      CurvedAnimation(parent: _logoController, curve: Curves.easeInOut),
     );
 
-    _fadeAnim = Tween<double>(begin: 0.6, end: 1.0).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
+    _fadeAnim = Tween<double>(begin: 0.7, end: 1.0).animate(
+      CurvedAnimation(parent: _logoController, curve: Curves.easeInOut),
     );
 
-    _pulseAnim = Tween<double>(begin: 0.95, end: 1.15).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.easeOutQuad),
+    _pulseAnim = Tween<double>(begin: 0.95, end: 1.25).animate(
+      CurvedAnimation(parent: _logoController, curve: Curves.easeOutQuad),
     );
+
+    // Ticker feature text transition every 1.1 seconds
+    Future.doWhile(() async {
+      await Future.delayed(const Duration(milliseconds: 1100));
+      if (mounted) {
+        setState(() {
+          _tickerIndex = (_tickerIndex + 1) % _tickers.length;
+        });
+        return true;
+      }
+      return false;
+    });
   }
 
   @override
   void dispose() {
-    _animController.dispose();
+    _waveController.dispose();
+    _logoController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final currentTicker = _tickers[_tickerIndex];
+
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
       body: Stack(
         children: [
-          // Background Glowing Radial Orbs
+          // 1. Flowing Organic Wave Scenery Background
+          AnimatedBuilder(
+            animation: _waveController,
+            builder: (context, child) {
+              return CustomPaint(
+                size: Size.infinite,
+                painter: SceneryWavePainter(progress: _waveController.value),
+              );
+            },
+          ),
+
+          // 2. Glowing Radial Background Orbs
           Positioned(
-            top: -100,
-            left: -100,
+            top: -80,
+            left: -80,
+            child: Container(
+              width: 280,
+              height: 280,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppTheme.primaryEmerald.withOpacity(0.15),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -90,
+            right: -90,
             child: Container(
               width: 300,
               height: 300,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppTheme.primaryEmerald.withOpacity(0.12),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -100,
-            right: -100,
-            child: Container(
-              width: 320,
-              height: 320,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppTheme.primaryCyan.withOpacity(0.12),
+                color: AppTheme.primaryCyan.withOpacity(0.15),
               ),
             ),
           ),
 
-          // Center Branding Content
+          // 3. Center Scenery Branding Content
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // Animated Glowing Emblem Logo
                 AnimatedBuilder(
-                  animation: _animController,
+                  animation: _logoController,
                   builder: (context, child) {
                     return Transform.scale(
                       scale: _scaleAnim.value,
                       child: Container(
-                        padding: const EdgeInsets.all(22),
+                        padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: const LinearGradient(
-                            colors: [AppTheme.primaryEmerald, AppTheme.primaryCyan],
+                            colors: [AppTheme.primaryEmerald, AppTheme.primaryCyan, Colors.purpleAccent],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: AppTheme.primaryEmerald.withOpacity(0.4 * _fadeAnim.value),
-                              blurRadius: 35 * _pulseAnim.value,
-                              spreadRadius: 8,
+                              color: AppTheme.primaryEmerald.withOpacity(0.45 * _fadeAnim.value),
+                              blurRadius: 40 * _pulseAnim.value,
+                              spreadRadius: 10,
                             ),
                           ],
                         ),
                         child: const Icon(
                           Icons.bolt_rounded,
-                          size: 56,
+                          size: 58,
                           color: Colors.black,
                         ),
                       ),
                     );
                   },
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 36),
 
                 // App Title
                 ShaderMask(
@@ -219,9 +261,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     "CHEEPPER BILLS",
                     style: TextStyle(
                       fontFamily: 'Outfit',
-                      fontSize: 26,
+                      fontSize: 28,
                       fontWeight: FontWeight.w900,
-                      letterSpacing: 3.0,
+                      letterSpacing: 3.5,
                       color: Colors.white,
                     ),
                   ),
@@ -232,17 +274,58 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 const Text(
                   "The Modern Bill Operating System",
                   style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                     color: AppTheme.textMuted,
-                    letterSpacing: 0.8,
+                    letterSpacing: 1.0,
                   ),
                 ),
-                const SizedBox(height: 48),
+                const SizedBox(height: 36),
 
-                // Pulsing Linear Loader
+                // Dynamic Feature Ticker Badge
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 400),
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: ScaleTransition(scale: animation, child: child),
+                  ),
+                  child: Container(
+                    key: ValueKey<int>(_tickerIndex),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.cardDark.withOpacity(0.85),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppTheme.primaryEmerald.withOpacity(0.4)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primaryEmerald.withOpacity(0.1),
+                          blurRadius: 12,
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(currentTicker["icon"]!, style: const TextStyle(fontSize: 14)),
+                        const SizedBox(width: 8),
+                        Text(
+                          currentTicker["text"]!,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 40),
+
+                // Flowing Animated Linear Progress Indicator
                 SizedBox(
-                  width: 140,
+                  width: 160,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(10),
                     child: const LinearProgressIndicator(
@@ -256,7 +339,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             ),
           ),
 
-          // Footer Security Label
+          // 4. Footer Security & System Label
           Positioned(
             bottom: 30,
             left: 0,
@@ -264,14 +347,14 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.shield_outlined, size: 14, color: AppTheme.textMuted),
+                const Icon(Icons.shield_outlined, size: 14, color: AppTheme.primaryCyan),
                 const SizedBox(width: 6),
                 Text(
-                  "Secured with 256-bit Encryption · Cheepper OS",
+                  "Secured with 256-bit Encryption · Cheepper OS v1.0",
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.w500,
-                    color: AppTheme.textMuted.withOpacity(0.7),
+                    color: AppTheme.textMuted.withOpacity(0.85),
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -281,6 +364,97 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         ],
       ),
     );
+  }
+}
+
+/// CustomPainter that draws 3 flowing sinusoidal gradient waves across the screen
+class SceneryWavePainter extends CustomPainter {
+  final double progress;
+
+  SceneryWavePainter({required this.progress});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double waveHeight = size.height * 0.12;
+    final double baseHeight = size.height * 0.82;
+
+    // Layer 1: Deep Emerald Wave
+    final path1 = Path();
+    path1.moveTo(0, size.height);
+    path1.lineTo(0, baseHeight);
+
+    for (double x = 0; x <= size.width; x += 10) {
+      final y = baseHeight + sin((x / size.width * 2 * pi) + (progress * 2 * pi)) * waveHeight;
+      path1.lineTo(x, y);
+    }
+    path1.lineTo(size.width, size.height);
+    path1.close();
+
+    final paint1 = Paint()
+      ..shader = LinearGradient(
+        colors: [
+          AppTheme.primaryEmerald.withOpacity(0.20),
+          AppTheme.primaryCyan.withOpacity(0.08),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ).createShader(Rect.fromLTWH(0, baseHeight - waveHeight, size.width, waveHeight * 2));
+
+    canvas.drawPath(path1, paint1);
+
+    // Layer 2: Cyan Wave (Offset frequency)
+    final path2 = Path();
+    final double baseHeight2 = size.height * 0.86;
+    path2.moveTo(0, size.height);
+    path2.lineTo(0, baseHeight2);
+
+    for (double x = 0; x <= size.width; x += 10) {
+      final y = baseHeight2 + cos((x / size.width * 2.5 * pi) - (progress * 2 * pi)) * (waveHeight * 0.75);
+      path2.lineTo(x, y);
+    }
+    path2.lineTo(size.width, size.height);
+    path2.close();
+
+    final paint2 = Paint()
+      ..shader = LinearGradient(
+        colors: [
+          AppTheme.primaryCyan.withOpacity(0.18),
+          Colors.purpleAccent.withOpacity(0.08),
+        ],
+        begin: Alignment.topRight,
+        end: Alignment.bottomLeft,
+      ).createShader(Rect.fromLTWH(0, baseHeight2 - waveHeight, size.width, waveHeight * 2));
+
+    canvas.drawPath(path2, paint2);
+
+    // Top Wave Layer
+    final topPath = Path();
+    topPath.moveTo(0, 0);
+    topPath.lineTo(size.width, 0);
+    topPath.lineTo(size.width, size.height * 0.14);
+
+    for (double x = size.width; x >= 0; x -= 10) {
+      final y = size.height * 0.14 + sin((x / size.width * 2 * pi) + (progress * 2 * pi)) * 25;
+      topPath.lineTo(x, y);
+    }
+    topPath.close();
+
+    final topPaint = Paint()
+      ..shader = LinearGradient(
+        colors: [
+          AppTheme.primaryEmerald.withOpacity(0.12),
+          AppTheme.primaryCyan.withOpacity(0.05),
+        ],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height * 0.2));
+
+    canvas.drawPath(topPath, topPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant SceneryWavePainter oldDelegate) {
+    return oldDelegate.progress != progress;
   }
 }
 

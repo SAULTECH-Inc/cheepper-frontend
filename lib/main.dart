@@ -51,15 +51,23 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 
   Future<void> _checkAuth() async {
+    final startTime = DateTime.now();
+    UserModel? fetchedUser;
     try {
-      final user = await ApiService.getMe();
-      setState(() {
-        _user = user;
-        _isLoading = false;
-      });
+      fetchedUser = await ApiService.getMe();
     } catch (_) {
+      fetchedUser = null;
+    }
+
+    // Ensure smooth branding splash screen is shown for at least 1.8 seconds
+    final elapsed = DateTime.now().difference(startTime);
+    if (elapsed.inMilliseconds < 1800) {
+      await Future.delayed(Duration(milliseconds: 1800 - elapsed.inMilliseconds));
+    }
+
+    if (mounted) {
       setState(() {
-        _user = null;
+        _user = fetchedUser;
         _isLoading = false;
       });
     }
@@ -77,14 +85,202 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: AppTheme.primaryEmerald)),
-      );
+      return const SplashScreen();
     }
     if (_user == null) {
       return AuthScreen(onSuccess: _onLoginSuccess);
     }
     return HomeScreen(user: _user!, onLogout: _onLogout);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// SPLASH SCREEN
+// -----------------------------------------------------------------------------
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _animController;
+  late Animation<double> _scaleAnim;
+  late Animation<double> _fadeAnim;
+  late Animation<double> _pulseAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+
+    _scaleAnim = Tween<double>(begin: 0.88, end: 1.05).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
+    );
+
+    _fadeAnim = Tween<double>(begin: 0.6, end: 1.0).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
+    );
+
+    _pulseAnim = Tween<double>(begin: 0.95, end: 1.15).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeOutQuad),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.bgDark,
+      body: Stack(
+        children: [
+          // Background Glowing Radial Orbs
+          Positioned(
+            top: -100,
+            left: -100,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppTheme.primaryEmerald.withOpacity(0.12),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -100,
+            right: -100,
+            child: Container(
+              width: 320,
+              height: 320,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppTheme.primaryCyan.withOpacity(0.12),
+              ),
+            ),
+          ),
+
+          // Center Branding Content
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Animated Glowing Emblem Logo
+                AnimatedBuilder(
+                  animation: _animController,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: _scaleAnim.value,
+                      child: Container(
+                        padding: const EdgeInsets.all(22),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: const LinearGradient(
+                            colors: [AppTheme.primaryEmerald, AppTheme.primaryCyan],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.primaryEmerald.withOpacity(0.4 * _fadeAnim.value),
+                              blurRadius: 35 * _pulseAnim.value,
+                              spreadRadius: 8,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.bolt_rounded,
+                          size: 56,
+                          color: Colors.black,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 32),
+
+                // App Title
+                ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [Colors.white, AppTheme.primaryEmerald, AppTheme.primaryCyan],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ).createShader(bounds),
+                  child: const Text(
+                    "CHEEPPER BILLS",
+                    style: TextStyle(
+                      fontFamily: 'Outfit',
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 3.0,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // App Tagline
+                const Text(
+                  "The Modern Bill Operating System",
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.textMuted,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 48),
+
+                // Pulsing Linear Loader
+                SizedBox(
+                  width: 140,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: const LinearProgressIndicator(
+                      minHeight: 4,
+                      backgroundColor: AppTheme.cardDark,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryEmerald),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Footer Security Label
+          Positioned(
+            bottom: 30,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.shield_outlined, size: 14, color: AppTheme.textMuted),
+                const SizedBox(width: 6),
+                Text(
+                  "Secured with 256-bit Encryption · Cheepper OS",
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.textMuted.withOpacity(0.7),
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
